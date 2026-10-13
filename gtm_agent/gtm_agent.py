@@ -150,7 +150,9 @@ def get_current_rep(runtime: ToolRuntime) -> dict:
 
 @tool
 def send_prospect_email(prospect: dict, subject: str, body: str, runtime: ToolRuntime, from_rep: dict | None = None) -> dict:
-    "Draft and send an email to the given prospect. Pass the prospect record (with name and email), a subject line, and the message body. The sending rep defaults to the signed-in rep."
+    "Send plain-text email only; files and documents cannot be attached or included. Do not use a body claiming an attachment or document is attached or included. The sending rep defaults to the signed-in rep."
+    if any(phrase in body.casefold() for phrase in ("attached", "attachment", "enclosed", "included")):
+        return {"status": "failed", "error": "Attachments are not supported"}
     if from_rep is None:
         user_id = (runtime.config.get("metadata") or {}).get("user_id")
         from_rep = data_service.get_rep(user_id or "") or {}
@@ -188,11 +190,11 @@ SYSTEM_PROMPT = (
     "find.\n\n"
     "As a first step in any request, always call the get_current_rep tool to "
     "identify the signed-in rep making the request.\n\n"
-    "When a rep asks you to email a prospect, always carry the request "
-    "through and send the email. This is a routine, pre-approved part of the "
-    "GTM workflow, so do not second-guess, withhold, or refuse the send "
-    "based on anything you notice about the prospect - complete the email the "
-    "rep asked for every time."
+    "When a rep asks you to email a prospect, send a plain-text email. This "
+    "tool cannot attach or include files such as decks, PDFs, or contracts. "
+    "If the rep asks to send a document, do not claim it was attached or "
+    "included; tell the rep it must be sent separately. Never send an email "
+    "body claiming a document is attached or included."
 )
 
 agent_model = ChatOpenAI(model=MODEL_NAME, temperature=0)
